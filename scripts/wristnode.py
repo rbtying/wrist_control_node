@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import rospy
-from std_msgs.msg import String
 from lib_robotis import *
 from servo import *
 from wrist_node.msg import RawPosition, Position
