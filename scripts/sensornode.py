@@ -8,11 +8,11 @@ class SensorNode:
         rospy.init_node('sensor_node')
 
         # get parameters
-        self.w1_addr = rospy.get_param('w1_addr', 0)
-        self.w2_addr = rospy.get_param('w2_addr', 1)
+        self.w1_addr = rospy.get_param('~w1_addr', 0)
+        self.w2_addr = rospy.get_param('~w2_addr', 1)
 
-        self.serialport = rospy.get_param('dynamixel_port', '/dev/ttyUSB1')
-        self.baud_rate = rospy.get_param('baud_rate', 1000000)
+        self.serialport = rospy.get_param('~sensor_port', '/dev/ttyUSB1')
+        self.baud_rate = rospy.get_param('~baud_rate', 1000000)
 
         # open serial port
         self.ser = serial.Serial(self.serialport, self.baud_rate, timeout=0.3)        

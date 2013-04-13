@@ -9,19 +9,19 @@ class WristNode:
         rospy.init_node('wrist_node')
 
         # get parameters
-        self.w1_addr = rospy.get_param('w1_addr', 1)
-        self.w2_addr = rospy.get_param('w2_addr', 2)
+        self.w1_addr = rospy.get_param('~w1_addr', 1)
+        self.w2_addr = rospy.get_param('~w2_addr', 2)
 
-        self.serialport = rospy.get_param('dynamixel_port', '/dev/ttyUSB0')
-        self.baud_rate = rospy.get_param('baud_rate', 1000000)
+        self.serialport = rospy.get_param('~dynamixel_port', '/dev/ttyUSB0')
+        self.baud_rate = rospy.get_param('~baud_rate', 1000000)
 
-        rotate_Kp = rospy.get_param('rotate_Kp', 1)
-        rotate_Ki = rospy.get_param('rotate_Ki', 0)
-        rotate_Kd = rospy.get_param('rotate_Kd', 0)
+        rotate_Kp = rospy.get_param('~rotate_Kp', 1)
+        rotate_Ki = rospy.get_param('~rotate_Ki', 0)
+        rotate_Kd = rospy.get_param('~rotate_Kd', 0)
 
-        angle_Kp = rospy.get_param('angle_Kp', 1)
-        angle_Ki = rospy.get_param('angle_Ki', 0)
-        angle_Kd = rospy.get_param('angle_Kd', 0)
+        angle_Kp = rospy.get_param('~angle_Kp', 1)
+        angle_Ki = rospy.get_param('~angle_Ki', 0)
+        angle_Kd = rospy.get_param('~angle_Kd', 0)
 
         # connect to dynamixels
         self.dyn = USB2Dynamixel_Device(self.serialport, self.baud_rate)
