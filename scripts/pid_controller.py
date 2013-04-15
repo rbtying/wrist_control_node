@@ -37,7 +37,8 @@ class PID:
 
         self.previousError = self.error
 
-        rospy.loginfo(rospy.get_name() + self.name + 's: %.02f i: %.02f e: %.02f o:%.02f' % (self.setpoint, input_value, self.error, self.output))
+        if self.name == 'angle':
+            rospy.loginfo(rospy.get_name() + ' ' +  self.name + '|s: %.02f i: %.02f e: %.02f o:%.02f' % (self.setpoint, input_value, self.error, self.output))
 
         return self.output
 

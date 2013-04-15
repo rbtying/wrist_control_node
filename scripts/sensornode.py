@@ -36,8 +36,8 @@ class SensorNode:
                 self.w1pos = 4096 - int(vals[self.w1_addr])
                 self.w2pos = int(vals[self.w2_addr])
 
-                self.w1pos_rad = raw_to_radians(self.w1pos)
-                self.w2pos_rad = raw_to_radians(self.w2pos)
+                self.w1pos_rad = self.raw_to_radians(self.w1pos)
+                self.w2pos_rad = self.raw_to_radians(self.w2pos)
 
                 self.angle = (self.w1pos_rad + self.w2pos_rad)
                 self.rotate = -self.w1pos_rad + self.w2pos_rad

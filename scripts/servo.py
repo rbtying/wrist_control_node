@@ -15,22 +15,7 @@ class Servo(Robotis_Servo):
         self.voltage = 0
         self.flip = flip
 
-    def update(self):
-        self.enc = self.read_encoder()
-        denc = self.enc - self.p_enc
-        if self.flip:
-            denc = -1 * denc
-
-        if abs(denc) < 3000: 
-            self.ang += denc
-
-        self.p_enc = self.enc
-
-        self.load = self.read_load()
-        self.voltage = self.read_voltage()
-
     def set_spd(self, spd):
-        # rospy.loginfo(rospy.get_name() + ': askmove: %f' % (spd))
         if self.flip:
             self.spd = -spd
         else:
@@ -64,8 +49,6 @@ class Differential(object):
 
         self.angle = 0
         self.rotate = 0
-        self.w1pos = 0
-        self.w2pos = 0
 
     def setAnglePID(self, kP, kI, kD):
         self.angle_pid.setParams(kP, kI, kD)
@@ -80,17 +63,10 @@ class Differential(object):
         self.rotate_pid.setSetpoint(rotate)
 
     def process(self, angle, rotate, dt):
-        # self.w1.update()
-        # self.w2.update()
-
-        self.w1pos = w1pos
-        self.w2pos = w2pos
-
         pi = 3.1415926535
 
         self.angle = angle
         self.rotate = rotate
-        # self.rotate = (-(w1pos - w2pos) + pi) % (2 * pi) - pi
         
         self.angle_pid.update(self.angle, dt)
         self.rotate_pid.update(self.rotate, dt)
@@ -98,11 +74,10 @@ class Differential(object):
         self.set_speed(self.angle_pid.getOutput(), self.rotate_pid.getOutput())
 
     def set_speed(self, spd, turn=0):
-        # rospy.loginfo(rospy.get_name() + ': move: %f %f' % (spd, turn))
-        # turn = min(max(turn, -10), 10)
-        # spd = min(max(spd, -10), 10)
         maxspd = 10
         # limit angle velocity
-        spd = min(max(spd, -maxspd / 2), maxspd / 2)
-        self.w1.set_spd(min(max(spd + turn, -maxspd), maxspd))
-        self.w2.set_spd(min(max(spd - turn, -maxspd), maxspd))
+        w1spd = min(max(spd + turn, -maxspd), maxspd)
+        w2spd = min(max(spd - turn, -maxspd), maxspd)
+        rospy.loginfo(rospy.get_name() + ' %.02f %.02f [%.02f %.02f]' % (w1spd, w2spd, spd, turn))
+        self.w1.set_spd(w1spd)
+        self.w2.set_spd(w2spd)

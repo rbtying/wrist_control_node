@@ -16,13 +16,13 @@ class WristNode:
         self.serialport = rospy.get_param('~dynamixel_port', '/dev/ttyUSB0')
         self.baud_rate = rospy.get_param('~baud_rate', 1000000)
 
-        rotate_Kp = rospy.get_param('~rotate_Kp', 0.05)
+        rotate_Kp = rospy.get_param('~rotate_Kp', 5)
         rotate_Ki = rospy.get_param('~rotate_Ki', 0)
-        rotate_Kd = rospy.get_param('~rotate_Kd', 0)
+        rotate_Kd = rospy.get_param('~rotate_Kd', 0.5)
 
-        angle_Kp = rospy.get_param('~angle_Kp', 20)
+        angle_Kp = rospy.get_param('~angle_Kp', 5)
         angle_Ki = rospy.get_param('~angle_Ki', 0)
-        angle_Kd = rospy.get_param('~angle_Kd', 0)
+        angle_Kd = rospy.get_param('~angle_Kd', 0.5)
 
         # connect to dynamixels
         self.dyn = USB2Dynamixel_Device(self.serialport, self.baud_rate)
@@ -43,8 +43,9 @@ class WristNode:
         # initialize variables
         self.rotate_sp = 0
         self.angle_sp = 0
-        self.w1_pos = 0
-        self.w2_pos = 0
+        self.angle = 0
+        self.rotate = 0
+        self.recvddata = False
 
     def run(self):
         dt = 0.02
@@ -55,24 +56,24 @@ class WristNode:
             self.wrist.setAngle(self.angle_sp)
             self.wrist.setRotate(self.rotate_sp)
             # rospy.loginfo(rospy.get_name() + ': setpoints: %f %f' % (self.rotate_sp, self.angle_sp))
+            if self.recvddata:
+                oldang = self.angle
+                oldrot = self.rotate
 
-            oldang = self.angle
-            oldrot = self.rotate
+                # run PID control
+                self.wrist.process(self.angle, self.rotate, dt)
 
-            # run PID control
-            self.wrist.process(self.angle, self.rotate, dt)
-
-            # publish current data
-            self.data_pub.publish(timestamp=rospy.get_rostime(), 
-                    angle=self.wrist.angle, 
-                    rotate=self.wrist.rotate,
-                    anglespd=(self.wrist.angle-oldang)/dt,
-                    rotatespd=(self.wrist.rotate-oldrot)/dt,
-                    angle_output=self.wrist.angle_pid.output,
-                    angle_error=self.wrist.angle_pid.error,
-                    rotate_output=self.wrist.rotate_pid.output,
-                    rotate_error=self.wrist.rotate_pid.error,
-                    )
+                # publish current data
+                self.data_pub.publish(timestamp=rospy.get_rostime(), 
+                        angle=self.wrist.angle, 
+                        rotate=self.wrist.rotate,
+                        anglespd=(self.wrist.angle-oldang)/dt,
+                        rotatespd=(self.wrist.rotate-oldrot)/dt,
+                        angle_output=self.wrist.angle_pid.output,
+                        angle_error=self.wrist.angle_pid.error,
+                        rotate_output=self.wrist.rotate_pid.output,
+                        rotate_error=self.wrist.rotate_pid.error,
+                        )
 
             self.rate.sleep()
 
@@ -88,7 +89,8 @@ class WristNode:
         pi = 3.1415926535
         self.angle = data.angle
         self.rotate = data.rotate
-        # rospy.loginfo(rospy.get_name() + ': rawpos: %d %d' % (self.w1_pos, self.w2_pos))
+        self.recvddata = True
+        # rospy.loginfo(rospy.get_name() + ': rawpos: %.02f %.02f' % (self.angle, self.rotate))
 
 if __name__ == '__main__':
     try:
