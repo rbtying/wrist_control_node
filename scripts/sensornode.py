@@ -33,23 +33,27 @@ class SensorNode:
                 lines = buf.split('\r\n')
                 last_recv = lines[-2]
                 vals = last_recv.split(',')
-                self.w1pos = 4096 - int(vals[self.w1_addr])
-                self.w2pos = int(vals[self.w2_addr])
 
-                self.w1pos_rad = self.raw_to_radians(self.w1pos)
-                self.w2pos_rad = self.raw_to_radians(self.w2pos)
+                try:
+                    self.w1pos = 4096 - int(vals[self.w1_addr])
+                    self.w2pos = int(vals[self.w2_addr])
 
-                self.angle = (self.w1pos_rad + self.w2pos_rad)
-                self.rotate = -self.w1pos_rad + self.w2pos_rad
-                
-                self.cur_pos_pub.publish(timestamp=rospy.get_rostime(), 
-                        w1pos=self.w1pos, 
-                        w2pos=self.w2pos,
-                        w1pos_rad=self.w1pos_rad,
-                        w2pos_rad=self.w2pos_rad,
-                        angle=self.angle,
-                        rotate=self.rotate,
-                        )
+                    self.w1pos_rad = self.raw_to_radians(self.w1pos)
+                    self.w2pos_rad = self.raw_to_radians(self.w2pos)
+
+                    self.angle = (self.w1pos_rad + self.w2pos_rad)
+                    self.rotate = -self.w1pos_rad + self.w2pos_rad
+                    
+                    self.cur_pos_pub.publish(timestamp=rospy.get_rostime(), 
+                            w1pos=self.w1pos, 
+                            w2pos=self.w2pos,
+                            w1pos_rad=self.w1pos_rad,
+                            w2pos_rad=self.w2pos_rad,
+                            angle=self.angle,
+                            rotate=self.rotate,
+                            )
+                except ValueError:
+                    pass
 
                 buf = lines[-1]
             self.rate.sleep()
