@@ -1,6 +1,7 @@
 from lib_robotis import *
 from pid_controller import *
 from datetime import datetime
+import rospy
 
 class Servo(Robotis_Servo):
     def __init__(self, dyn, addr, flip):
@@ -29,14 +30,17 @@ class Servo(Robotis_Servo):
         self.voltage = self.read_voltage()
 
     def set_spd(self, spd):
+        # rospy.loginfo(rospy.get_name() + ': askmove: %f' % (spd))
         if self.flip:
             self.spd = -spd
         else:
             self.spd = spd
+
         if self.spd > 21:
             self.spd = 21
         elif self.spd < -21:
             self.spd = -21
+
         try:
             self.set_angvel(self.spd)
         except:
@@ -55,8 +59,8 @@ class Differential(object):
         self.w1.init_cont_turn()
         self.w2.init_cont_turn()
 
-        self.angle_pid = PID(0.1, 0, 0, 100, 0)
-        self.rotate_pid = PID(0.1, 0, 0, 100, 0)
+        self.angle_pid = PID(1, 0, 0, 100, 0, 'angle')
+        self.rotate_pid = PID(1, 0, 0, 100, 0, 'rotate')
 
         self.angle = 0
         self.rotate = 0
@@ -75,15 +79,18 @@ class Differential(object):
     def setRotate(self, rotate):
         self.rotate_pid.setSetpoint(rotate)
 
-    def process(self, w1pos, w2pos, dt):
-        self.w1.update()
-        self.w2.update()
+    def process(self, angle, rotate, dt):
+        # self.w1.update()
+        # self.w2.update()
 
         self.w1pos = w1pos
         self.w2pos = w2pos
 
-        self.angle = (w1pos + w2pos) / 2
-        self.rotate = (w1pos - w2pos) / 2
+        pi = 3.1415926535
+
+        self.angle = angle
+        self.rotate = rotate
+        # self.rotate = (-(w1pos - w2pos) + pi) % (2 * pi) - pi
         
         self.angle_pid.update(self.angle, dt)
         self.rotate_pid.update(self.rotate, dt)
@@ -91,6 +98,11 @@ class Differential(object):
         self.set_speed(self.angle_pid.getOutput(), self.rotate_pid.getOutput())
 
     def set_speed(self, spd, turn=0):
-        self.w1.set_spd(spd + turn)
-        self.w2.set_spd(spd - turn)
-
+        # rospy.loginfo(rospy.get_name() + ': move: %f %f' % (spd, turn))
+        # turn = min(max(turn, -10), 10)
+        # spd = min(max(spd, -10), 10)
+        maxspd = 10
+        # limit angle velocity
+        spd = min(max(spd, -maxspd / 2), maxspd / 2)
+        self.w1.set_spd(min(max(spd + turn, -maxspd), maxspd))
+        self.w2.set_spd(min(max(spd - turn, -maxspd), maxspd))

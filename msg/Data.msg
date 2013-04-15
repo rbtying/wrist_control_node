@@ -1,5 +1,10 @@
 time timestamp
-float32 rotate
-float32 angle
-float32 rotatespd
-float32 anglespd
+float64 rotate
+float64 angle
+float64 rotatespd
+float64 anglespd
+
+float64 rotate_output
+float64 rotate_error
+float64 angle_output
+float64 angle_error

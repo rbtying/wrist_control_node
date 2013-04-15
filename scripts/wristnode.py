@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy
 from lib_robotis import *
+from std_msgs.msg import *
 from servo import *
 from wrist_node.msg import RawPosition, Data
 
@@ -15,17 +16,17 @@ class WristNode:
         self.serialport = rospy.get_param('~dynamixel_port', '/dev/ttyUSB0')
         self.baud_rate = rospy.get_param('~baud_rate', 1000000)
 
-        rotate_Kp = rospy.get_param('~rotate_Kp', 1)
+        rotate_Kp = rospy.get_param('~rotate_Kp', 0.05)
         rotate_Ki = rospy.get_param('~rotate_Ki', 0)
         rotate_Kd = rospy.get_param('~rotate_Kd', 0)
 
-        angle_Kp = rospy.get_param('~angle_Kp', 1)
+        angle_Kp = rospy.get_param('~angle_Kp', 20)
         angle_Ki = rospy.get_param('~angle_Ki', 0)
         angle_Kd = rospy.get_param('~angle_Kd', 0)
 
         # connect to dynamixels
         self.dyn = USB2Dynamixel_Device(self.serialport, self.baud_rate)
-        self.wrist = Wrist(dyn, self.w1_addr, self.w2_addr)
+        self.wrist = Differential(self.dyn, self.w1_addr, self.w2_addr)
 
         # set PID
         self.wrist.setAnglePID(angle_Kp, angle_Ki, angle_Kd)
@@ -35,7 +36,8 @@ class WristNode:
         self.data_pub = rospy.Publisher('wrist_diff/data', Data)
 
         # subscribers
-        self.des_pos_sub = rospy.Subscriber('wrist_diff/desired_pos', Position, self.newpos_cb)
+        self.des_ang_sub = rospy.Subscriber('wrist_diff/desired_angle', Float32, self.angle_cb)
+        self.des_rot_sub = rospy.Subscriber('wrist_diff/desired_rotation', Float32, self.rotate_cb)
         self.raw_pos_sub = rospy.Subscriber('wrist_diff/raw_pos', RawPosition, self.rawpos_cb)
 
         # initialize variables
@@ -45,43 +47,53 @@ class WristNode:
         self.w2_pos = 0
 
     def run(self):
-        dt = 0.01
+        dt = 0.02
         self.rate = rospy.Rate(1/dt)
 
         while not rospy.is_shutdown():
             # set setpoints
             self.wrist.setAngle(self.angle_sp)
             self.wrist.setRotate(self.rotate_sp)
+            # rospy.loginfo(rospy.get_name() + ': setpoints: %f %f' % (self.rotate_sp, self.angle_sp))
 
-            oldang = self.wrist.angle
-            oldrot = self.wrist.rotate
+            oldang = self.angle
+            oldrot = self.rotate
 
             # run PID control
-            self.wrist.process(self.w1_pos, self.w2_pos, dt)
+            self.wrist.process(self.angle, self.rotate, dt)
 
-            # publish current position
-            self.data_pub.publish(time=rospy.get_rostime(), 
+            # publish current data
+            self.data_pub.publish(timestamp=rospy.get_rostime(), 
                     angle=self.wrist.angle, 
                     rotate=self.wrist.rotate,
                     anglespd=(self.wrist.angle-oldang)/dt,
                     rotatespd=(self.wrist.rotate-oldrot)/dt,
+                    angle_output=self.wrist.angle_pid.output,
+                    angle_error=self.wrist.angle_pid.error,
+                    rotate_output=self.wrist.rotate_pid.output,
+                    rotate_error=self.wrist.rotate_pid.error,
                     )
 
             self.rate.sleep()
 
-    def newpos_cb(self, data):
-        rospy.loginfo(rospy.get_name() + ': desired pos: %.02f %02f' % (data.rotate, data.angle))
-        self.rotate_sp = data.rotate
-        self.angle_sp = data.angle
+    def rotate_cb(self, data):
+        pi = 3.1415926535
+        self.rotate_sp = max(min(data.data, pi), -pi)
+
+    def angle_cb(self, data):
+        pi = 3.1415926535
+        self.angle_sp = max(min(data.data, pi/2), -pi/2)
 
     def rawpos_cb(self, data):
-        rospy.loginfo(rospy.get_name() + ': rawpos: %d %d' % (data.w1pos, data.w2pos))
-        self.w1_pos = data.w1pos
-        self.w2_pos = data.w2pos
+        pi = 3.1415926535
+        self.angle = data.angle
+        self.rotate = data.rotate
+        # rospy.loginfo(rospy.get_name() + ': rawpos: %d %d' % (self.w1_pos, self.w2_pos))
 
 if __name__ == '__main__':
     try:
         wrist = WristNode()    
         wrist.run()
-    except rospy.ROSInterruptException:
+    except rospy.ROSInterruptException, KeyboardInterrupt:
+        wrist.wrist.set_speed(0, 0)
         pass

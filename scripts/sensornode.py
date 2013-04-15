@@ -11,7 +11,7 @@ class SensorNode:
         self.w1_addr = rospy.get_param('~w1_addr', 0)
         self.w2_addr = rospy.get_param('~w2_addr', 1)
 
-        self.serialport = rospy.get_param('~sensor_port', '/dev/ttyUSB1')
+        self.serialport = rospy.get_param('~sensor_port', '/dev/ttyACM0')
         self.baud_rate = rospy.get_param('~baud_rate', 1000000)
 
         # open serial port
@@ -20,23 +20,39 @@ class SensorNode:
         # publishers
         self.cur_pos_pub = rospy.Publisher('wrist_diff/raw_pos', RawPosition)
 
+    def raw_to_radians(self, raw):
+        pi = 3.1415926535
+        return (raw * 1.0 - 2048) / 4096 * 2 * pi * 5
+
     def run(self):
+        self.rate = rospy.Rate(100)
+        buf = ''
         while not rospy.is_shutdown():
-            # publish current position
-            self.ser.flushInput()
-            self.ser.write('get\n')
-            self.ser.flush()
-            data = self.ser.readline()
-            rospy.loginfo('data recv: %s' % data)
+            buf = buf + self.ser.read(self.ser.inWaiting())
+            if '\r\n' in buf:
+                lines = buf.split('\r\n')
+                last_recv = lines[-2]
+                vals = last_recv.split(',')
+                self.w1pos = 4096 - int(vals[self.w1_addr])
+                self.w2pos = int(vals[self.w2_addr])
 
-            vals = data.split(',')
+                self.w1pos_rad = raw_to_radians(self.w1pos)
+                self.w2pos_rad = raw_to_radians(self.w2pos)
 
-            self.w1pos = vals[self.w1_addr]
-            self.w2pos = vals[self.w2_addr]
-            
-            self.cur_pos_pub.publish(time=rospy.get_rostime(), w1pos=self.w1pos, w2pos=self.w2pos)
+                self.angle = (self.w1pos_rad + self.w2pos_rad)
+                self.rotate = -self.w1pos_rad + self.w2pos_rad
+                
+                self.cur_pos_pub.publish(timestamp=rospy.get_rostime(), 
+                        w1pos=self.w1pos, 
+                        w2pos=self.w2pos,
+                        w1pos_rad=self.w1pos_rad,
+                        w2pos_rad=self.w2pos_rad,
+                        angle=self.angle,
+                        rotate=self.rotate,
+                        )
 
-            rospy.sleep(0.010)
+                buf = lines[-1]
+            self.rate.sleep()
 
 if __name__ == '__main__':
     try:
