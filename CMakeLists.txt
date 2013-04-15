@@ -23,7 +23,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation
 add_message_files(
   FILES
   RawPosition.msg
-  Position.msg
+  Data.msg
 #   Message1.msg
 #   Message2.msg
 )

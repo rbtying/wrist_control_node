@@ -2,7 +2,7 @@
 import rospy
 from lib_robotis import *
 from servo import *
-from wrist_node.msg import RawPosition, Position
+from wrist_node.msg import RawPosition, Data
 
 class WristNode:
     def __init__(self):
@@ -32,7 +32,7 @@ class WristNode:
         self.wrist.setRotatePID(rotate_Kp, rotate_Ki, rotate_Kd)
 
         # publishers
-        self.cur_pos_pub = rospy.Publisher('wrist_diff/cur_pos', Position)
+        self.data_pub = rospy.Publisher('wrist_diff/data', Data)
 
         # subscribers
         self.des_pos_sub = rospy.Subscriber('wrist_diff/desired_pos', Position, self.newpos_cb)
@@ -45,18 +45,29 @@ class WristNode:
         self.w2_pos = 0
 
     def run(self):
+        dt = 0.01
+        self.rate = rospy.Rate(1/dt)
+
         while not rospy.is_shutdown():
             # set setpoints
             self.wrist.setAngle(self.angle_sp)
             self.wrist.setRotate(self.rotate_sp)
 
+            oldang = self.wrist.angle
+            oldrot = self.wrist.rotate
+
             # run PID control
-            self.wrist.process(self.w1_pos, self.w2_pos, 0.01)
+            self.wrist.process(self.w1_pos, self.w2_pos, dt)
 
             # publish current position
-            self.cur_pos_pub.publish(time=rospy.get_rostime(), angle=self.wrist.angle, rotate=self.wrist.rotate)
+            self.data_pub.publish(time=rospy.get_rostime(), 
+                    angle=self.wrist.angle, 
+                    rotate=self.wrist.rotate,
+                    anglespd=(self.wrist.angle-oldang)/dt,
+                    rotatespd=(self.wrist.rotate-oldrot)/dt,
+                    )
 
-            rospy.sleep(0.010)
+            self.rate.sleep()
 
     def newpos_cb(self, data):
         rospy.loginfo(rospy.get_name() + ': desired pos: %.02f %02f' % (data.rotate, data.angle))
