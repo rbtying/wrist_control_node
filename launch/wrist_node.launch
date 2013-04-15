@@ -6,9 +6,9 @@
         <param name="dynamixel_port" value="/dev/ttyUSB0" type="string" />
         <param name="baud_rate" value="1000000" type="int" />
 
-        <param name="rotate_Kp" value="5" type="double" />
+        <param name="rotate_Kp" value="2" type="double" />
         <param name="rotate_Ki" value="0" type="double" />
-        <param name="rotate_Kd" value="0.5" type="double" />
+        <param name="rotate_Kd" value="0.25" type="double" />
 
         <param name="angle_Kp" value="5" type="double" />
         <param name="angle_Ki" value="0" type="double" />
