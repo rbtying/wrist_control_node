@@ -1,0 +1,4 @@
+<launch>
+    <include file="$(find wrist_node)/launch/wrist_node.launch" />
+    <include file="$(find wrist_node)/launch/joy.launch" />
+</launch>
