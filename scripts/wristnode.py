@@ -47,35 +47,43 @@ class WristNode:
         self.rotate = 0
         self.recvddata = False
 
+        rospy.on_shutdown(self.on_shutdown)
+
     def run(self):
         dt = 0.02
         self.rate = rospy.Rate(1/dt)
 
-        while not rospy.is_shutdown():
-            # set setpoints
-            self.wrist.setAngle(self.angle_sp)
-            self.wrist.setRotate(self.rotate_sp)
-            # rospy.loginfo(rospy.get_name() + ': setpoints: %f %f' % (self.rotate_sp, self.angle_sp))
-            if self.recvddata:
-                oldang = self.angle
-                oldrot = self.rotate
+        try:
+            while not rospy.is_shutdown():
+                # set setpoints
+                self.wrist.setAngle(self.angle_sp)
+                self.wrist.setRotate(self.rotate_sp)
+                # rospy.loginfo(rospy.get_name() + ': setpoints: %f %f' % (self.rotate_sp, self.angle_sp))
+                if self.recvddata:
+                    oldang = self.angle
+                    oldrot = self.rotate
 
-                # run PID control
-                self.wrist.process(self.angle, self.rotate, dt)
+                    # run PID control
+                    self.wrist.process(self.angle, self.rotate, dt)
 
-                # publish current data
-                self.data_pub.publish(timestamp=rospy.get_rostime(), 
-                        angle=self.wrist.angle, 
-                        rotate=self.wrist.rotate,
-                        anglespd=(self.wrist.angle-oldang)/dt,
-                        rotatespd=(self.wrist.rotate-oldrot)/dt,
-                        angle_output=self.wrist.angle_pid.output,
-                        angle_error=self.wrist.angle_pid.error,
-                        rotate_output=self.wrist.rotate_pid.output,
-                        rotate_error=self.wrist.rotate_pid.error,
-                        )
+                    # publish current data
+                    self.data_pub.publish(timestamp=rospy.get_rostime(), 
+                            angle=self.wrist.angle, 
+                            rotate=self.wrist.rotate,
+                            anglespd=(self.wrist.angle-oldang)/dt,
+                            rotatespd=(self.wrist.rotate-oldrot)/dt,
+                            angle_output=self.wrist.angle_pid.output,
+                            angle_error=self.wrist.angle_pid.error,
+                            rotate_output=self.wrist.rotate_pid.output,
+                            rotate_error=self.wrist.rotate_pid.error,
+                            )
 
-            self.rate.sleep()
+                self.rate.sleep()
+        except:
+            self.wrist.set_speed(0, 0)
+
+    def on_shutdown(self):
+        self.wrist.set_speed(0, 0)
 
     def rotate_cb(self, data):
         pi = 3.1415926535

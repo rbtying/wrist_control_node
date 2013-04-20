@@ -41,7 +41,7 @@ class SensorNode:
                     self.w1pos_rad = self.raw_to_radians(self.w1pos)
                     self.w2pos_rad = self.raw_to_radians(self.w2pos)
 
-                    self.angle = (self.w1pos_rad + self.w2pos_rad)
+                    self.angle = -(self.w1pos_rad + self.w2pos_rad)
                     self.rotate = -self.w1pos_rad + self.w2pos_rad
                     
                     self.cur_pos_pub.publish(timestamp=rospy.get_rostime(), 
