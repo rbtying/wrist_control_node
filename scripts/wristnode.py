@@ -82,7 +82,14 @@ class WristNode:
                     # run PID control
                     self.wrist.process(self.angle, self.rotate, dt)
                     self.twist_PID.update(self.twist, dt)
-                    self.twist_servo.set_spd(self.twist_PID.getOutput())
+
+                    twist_out = self.twist_PID.getOutput()
+                    if twist_out > 10:
+                        twist_out = 10
+                    elif twist_out < -10:
+                        twist_out = -10
+
+                    self.twist_servo.set_spd(twist_out)
 
                     # publish current data
                     self.data_pub.publish(timestamp=rospy.get_rostime(), 
@@ -107,7 +114,10 @@ class WristNode:
 
     def on_shutdown(self):
         self.wrist.set_speed(0, 0)
+        self.wrist.w1.stopped = True
+        self.wrist.w2.stopped = True
         self.twist_servo.set_spd(0)
+        self.twist_servo.stopped = True
 
     def rotate_cb(self, data):
         pi = 3.1415926535
@@ -115,7 +125,7 @@ class WristNode:
 
     def twist_cb(self, data):
         pi = 3.1415926535
-        self.twist_sp = max(min(data.data, pi), -pi)
+        self.twist_sp = max(min(data.data, 2), -2)
 
     def angle_cb(self, data):
         pi = 3.1415926535

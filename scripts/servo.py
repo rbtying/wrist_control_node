@@ -14,6 +14,7 @@ class Servo(Robotis_Servo):
         self.ang = 0
         self.voltage = 0
         self.flip = flip
+        self.stopped = False
 
     def set_spd(self, spd):
         if self.flip:
@@ -27,7 +28,10 @@ class Servo(Robotis_Servo):
             self.spd = -21
 
         try:
-            self.set_angvel(self.spd)
+            if self.stopped:
+                self.set_angvel(0.0)
+            else:
+                self.set_angvel(self.spd)
         except:
             self.set_angvel(0.0)
 

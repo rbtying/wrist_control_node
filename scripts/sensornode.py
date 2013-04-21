@@ -56,9 +56,9 @@ class SensorNode:
                             w3pos_rad=self.w3pos_rad,
                             angle=self.angle,
                             rotate=self.rotate,
-                            twist=self.w3pos_rad,
+                            twist=self.w3pos_rad / 5, 
                             )
-                except ValueError:
+                except:
                     pass
 
                 buf = lines[-1]

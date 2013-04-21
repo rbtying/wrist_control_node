@@ -18,6 +18,6 @@
 
         <param name="twist_Kp" value="10" type="double" />
         <param name="twist_Ki" value="0" type="double" />
-        <param name="twist_Kd" value="2" type="double" />
+        <param name="twist_Kd" value="0.1" type="double" />
     </node>
 </launch>

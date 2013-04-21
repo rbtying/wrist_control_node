@@ -28,7 +28,7 @@ class JoyCtrl:
 
             diff_rotate_ang = diff_rotate_val * pi
             diff_angle_ang = diff_angle_val * pi / 2
-            twist_ang = twist_angle_val * pi
+            twist_ang = twist_angle_val * 2
 
             self.diff_rotate_pub.publish(data=diff_rotate_ang)
             self.diff_angle_pub.publish(data=diff_angle_ang)
