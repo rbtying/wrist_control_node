@@ -169,7 +169,7 @@ class Robotis_Servo(object):
     def kill_cont_turn(self):
         '''resets CCW angle limits to allow commands through 'move_angle' again
         '''
-        self.write_address(0x08, [255, 3])
+        self.write_address(0x08, [0xff, 0x0f])
 
     def is_moving(self):
         ''' returns True if servo is moving.
@@ -248,7 +248,7 @@ class Robotis_Servo(object):
         '''
         # In some border cases, we can end up above/below the encoder limits.
         #   eg. int(round(math.radians( 180 ) / ( math.radians(360) / 0xFFF ))) + 0x7FF => -1
-        n = min( max( n, 0 ), self.settings['max_encoder'] ) 
+        # n = min( max( n, 0 ), self.settings['max_encoder'] ) 
         hi,lo = n / 256, n % 256
         return self.write_address( 0x1e, [lo,hi] )
 
