@@ -2,6 +2,7 @@ time timestamp
 float64 rotate
 float64 angle
 float64 twist
+float64 hand_position
 float64 rotatespd
 float64 anglespd
 float64 twistspd

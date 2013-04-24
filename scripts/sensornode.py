@@ -29,6 +29,7 @@ class SensorNode:
         self.rate = rospy.Rate(50)
         buf = ''
         while not rospy.is_shutdown():
+            self.ser.write('a')
             buf = buf + self.ser.read(self.ser.inWaiting())
             if '\r\n' in buf:
                 lines = buf.split('\r\n')
@@ -36,8 +37,8 @@ class SensorNode:
                 vals = last_recv.split(',')
 
                 try:
-                    self.w2pos = int(vals[self.w2_addr])
                     self.w1pos = 4096 - int(vals[self.w1_addr])
+                    self.w2pos = int(vals[self.w2_addr])
                     self.w3pos = int(vals[self.w3_addr])
 
                     self.w1pos_rad = self.raw_to_radians(self.w1pos)

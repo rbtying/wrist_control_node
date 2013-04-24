@@ -40,7 +40,7 @@ import math
 class USB2Dynamixel_Device():
     ''' Class that manages serial port contention between servos on same bus
     '''
-    def __init__( self, dev_name = '/dev/ttyUSB0', baudrate = 57600 ):
+    def __init__( self, dev_name = '/dev/ttyUSB0', baudrate = 57600 , timeout=1.0):
         try:
             self.dev_name = string.atoi( dev_name ) # stores the serial port as 0-based integer for Windows
         except:
@@ -48,6 +48,8 @@ class USB2Dynamixel_Device():
 
         self.mutex = thread.allocate_lock()
         self.servo_dev = None
+
+        self.timeout = timeout
 
         self.acq_mutex()
         self._open_serial( baudrate )
@@ -70,7 +72,7 @@ class USB2Dynamixel_Device():
 
     def _open_serial(self, baudrate):
         try:
-            self.servo_dev = serial.Serial(self.dev_name, baudrate, timeout=1.0)
+            self.servo_dev = serial.Serial(self.dev_name, baudrate, timeout=self.timeout)
             # Closing the device first seems to prevent "Access Denied" errors on WinXP
             # (Conversations with Brian Wu @ MIT on 6/23/2010)
             self.servo_dev.close()  

@@ -13,27 +13,32 @@ class WristNode:
         self.w1_addr = rospy.get_param('~w1_addr', 1)
         self.w2_addr = rospy.get_param('~w2_addr', 2)
         self.w3_addr = rospy.get_param('~w3_addr', 5)
+        self.hand_addr = rospy.get_param('~hand_addr', 7)
 
         self.serialport = rospy.get_param('~dynamixel_port', '/dev/ttyUSB0')
         self.baud_rate = rospy.get_param('~baud_rate', 1000000)
 
-        rotate_Kp = rospy.get_param('~rotate_Kp', 5)
+        rotate_Kp = rospy.get_param('~rotate_Kp', 2)
         rotate_Ki = rospy.get_param('~rotate_Ki', 0)
-        rotate_Kd = rospy.get_param('~rotate_Kd', 0.5)
+        rotate_Kd = rospy.get_param('~rotate_Kd', 0.25)
 
         angle_Kp = rospy.get_param('~angle_Kp', 5)
         angle_Ki = rospy.get_param('~angle_Ki', 0)
         angle_Kd = rospy.get_param('~angle_Kd', 0.5)
 
-        twist_Kp = rospy.get_param('~twist_Kp', 5)
+        twist_Kp = rospy.get_param('~twist_Kp', 10)
         twist_Ki = rospy.get_param('~twist_Ki', 0)
-        twist_Kd = rospy.get_param('~twist_Kd', 0.5)
+        twist_Kd = rospy.get_param('~twist_Kd', 0.1)
 
         # connect to dynamixels
-        self.dyn = USB2Dynamixel_Device(self.serialport, self.baud_rate)
+        self.dyn = USB2Dynamixel_Device(self.serialport, self.baud_rate, 0.25)
         self.wrist = Differential(self.dyn, self.w1_addr, self.w2_addr)
+
         self.twist_servo = Servo(self.dyn, self.w3_addr, True)
         self.twist_servo.init_cont_turn()
+
+        self.hand_servo = Servo(self.dyn, self.hand_addr, True)
+        self.hand_servo.kill_cont_turn()
 
         # set PID
         self.wrist.setAnglePID(angle_Kp, angle_Ki, angle_Kd)
@@ -48,7 +53,9 @@ class WristNode:
         self.des_rot_sub = rospy.Subscriber('wrist_diff/desired_rotation', Float32, self.rotate_cb)
         self.des_twt_sub = rospy.Subscriber('wrist_diff/desired_twist', Float32,
                 self.twist_cb)
+        self.des_hand_sub = rospy.Subscriber('wrist_diff/desired_hand', Float32, self.hand_cb)
         self.raw_pos_sub = rospy.Subscriber('wrist_diff/raw_pos', RawPosition, self.rawpos_cb)
+
 
         # initialize variables
         self.rotate_sp = 0
@@ -58,6 +65,7 @@ class WristNode:
         self.rotate = 0
         self.twist = 0
         self.recvddata = False
+        self.shutting_down = False
 
         rospy.on_shutdown(self.on_shutdown)
 
@@ -65,8 +73,8 @@ class WristNode:
         dt = 0.02
         self.rate = rospy.Rate(1/dt)
 
-        try:
-            while not rospy.is_shutdown():
+        while not rospy.is_shutdown():
+            if not self.shutting_down:
                 # set setpoints
                 self.wrist.setAngle(self.angle_sp)
                 self.wrist.setRotate(self.rotate_sp)
@@ -91,11 +99,14 @@ class WristNode:
 
                     self.twist_servo.set_spd(twist_out)
 
+                    hand_servo_pos = self.hand_servo.read_encoder() * 1.0 / 4096;
+
                     # publish current data
                     self.data_pub.publish(timestamp=rospy.get_rostime(), 
                             angle=self.wrist.angle, 
                             rotate=self.wrist.rotate,
                             twist=self.twist,
+                            hand_position=hand_servo_pos,
                             anglespd=(self.wrist.angle-oldang)/dt,
                             rotatespd=(self.wrist.rotate-oldrot)/dt,
                             twistspd=(self.twist-oldtwist)/dt,
@@ -106,18 +117,27 @@ class WristNode:
                             rotate_output=self.wrist.rotate_pid.output,
                             rotate_error=self.wrist.rotate_pid.error,
                             )
+                else:
+                    self.wrist.set_speed(0, 0)
+                    self.twist_servo.set_spd(0)
+                    self.hand_servo.move_to_encoder(0)
 
                 self.rate.sleep()
-        except:
-            self.wrist.set_speed(0, 0)
-            self.twist_servo.set_spd(0)
+            else: 
+                rospy.logwarn(rospy.get_name() + ': shutting down')
+                self.wrist_set_speed(0, 0)
+                self.twist_servo.set_spd(0)
+                self.hand_servo.move_to_encoder(0)
+                break
 
     def on_shutdown(self):
-        self.wrist.set_speed(0, 0)
+        self.shutting_down = True
         self.wrist.w1.stopped = True
+        self.wrist.w1.kill_cont_turn()
         self.wrist.w2.stopped = True
-        self.twist_servo.set_spd(0)
+        self.wrist.w2.kill_cont_turn()
         self.twist_servo.stopped = True
+        self.twist_servo.kill_cont_turn()
 
     def rotate_cb(self, data):
         pi = 3.1415926535
@@ -131,6 +151,11 @@ class WristNode:
         pi = 3.1415926535
         self.angle_sp = max(min(data.data, pi/2), -pi/2)
 
+    def hand_cb(self, data):
+        val = int(max(min(data.data, 1), 0) * 4095)
+        # rospy.loginfo(rospy.get_name() + ': hand_cb: %.02f %d' % (data.data, val))
+        self.hand_servo.move_to_encoder(val)
+
     def rawpos_cb(self, data):
         pi = 3.1415926535
         self.angle = data.angle
@@ -143,6 +168,5 @@ if __name__ == '__main__':
     try:
         wrist = WristNode()    
         wrist.run()
-    except rospy.ROSInterruptException, KeyboardInterrupt:
-        wrist.wrist.set_speed(0, 0)
+    except rospy.ROSInterruptException:
         pass

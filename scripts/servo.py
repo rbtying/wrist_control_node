@@ -33,7 +33,7 @@ class Servo(Robotis_Servo):
             else:
                 self.set_angvel(self.spd)
         except:
-            self.set_angvel(0.0)
+            pass
 
     def reset(self):
         self.update()
@@ -82,6 +82,6 @@ class Differential(object):
         # limit angle velocity
         w1spd = min(max(spd + turn, -maxspd), maxspd)
         w2spd = min(max(spd - turn, -maxspd), maxspd)
-        rospy.loginfo(rospy.get_name() + ' %.02f %.02f [%.02f %.02f]' % (w1spd, w2spd, spd, turn))
+        # rospy.loginfo(rospy.get_name() + ' %.02f %.02f [%.02f %.02f]' % (w1spd, w2spd, spd, turn))
         self.w1.set_spd(w1spd)
         self.w2.set_spd(w2spd)
